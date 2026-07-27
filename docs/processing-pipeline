@@ -1,0 +1,456 @@
+# RAG Java Lab - Processing Pipeline
+
+## Overview
+
+The processing pipeline is responsible for transforming an uploaded document into searchable vector embeddings.
+
+Rather than storing an uploaded file directly for AI retrieval, the system performs several processing stages:
+
+1. Store the original file.
+2. Extract readable text.
+3. Split the text into smaller chunks.
+4. Generate embeddings for each chunk.
+5. Store the vectors in PostgreSQL using pgvector.
+6. Activate the processed document version.
+
+This pipeline ensures that every uploaded document becomes searchable using semantic similarity.
+
+---
+
+# High Level Pipeline
+
+```text id="fjlwm3"
+Upload Document
+        │
+        ▼
+Store Original File
+        │
+        ▼
+Create Document Version
+        │
+        ▼
+Extract Text
+        │
+        ▼
+Split Into Chunks
+        │
+        ▼
+Generate Metadata
+        │
+        ▼
+Persist Chunks
+        │
+        ▼
+Generate Embeddings
+        │
+        ▼
+Persist Embeddings
+        │
+        ▼
+Activate Version
+```
+
+---
+
+# Pipeline Steps
+
+## Step 1 - Upload
+
+A client uploads a document through the REST API.
+
+Currently supported:
+
+* PDF
+* Plain Text
+
+Future support:
+
+* DOCX
+* HTML
+* Markdown
+* Excel
+* Images (OCR)
+
+---
+
+## Step 2 - Store Original File
+
+The uploaded file is immediately stored.
+
+Purpose:
+
+* Preserve the original document.
+* Allow future reprocessing.
+* Avoid re-uploading files.
+
+Current implementation:
+
+```text id="fwgjl9"
+Local File Storage
+```
+
+Future implementations may include:
+
+* AWS S3
+* Azure Blob Storage
+* Google Cloud Storage
+* MinIO
+
+---
+
+## Step 3 - Create Document Version
+
+Every upload creates a new version.
+
+Example:
+
+```text id="nl0s8s"
+Employee Handbook
+
+Version 1
+
+↓
+
+Version 2
+
+↓
+
+Version 3
+```
+
+Only one version is active.
+
+Previous versions remain available for history.
+
+---
+
+## Step 4 - Text Extraction
+
+The processing service loads the stored file and extracts plain text.
+
+Current implementation:
+
+```text id="b4jlwm"
+Apache PDFBox
+```
+
+Output:
+
+```text id="n2qud6"
+PDF
+
+↓
+
+Plain Text
+```
+
+The extracted text becomes the input for chunking.
+
+---
+
+## Step 5 - Chunking
+
+Large documents are divided into smaller sections.
+
+Example:
+
+```text id="v3kbg0"
+Document
+
+↓
+
+6,433 Characters
+
+↓
+
+13 Chunks
+```
+
+Current strategy:
+
+* Character-based chunking
+* Fixed chunk size
+* Overlap between chunks
+
+Reason:
+
+Large Language Models perform significantly better when retrieving smaller, focused passages instead of entire documents.
+
+Future chunking strategies:
+
+* Token-based
+* Sentence-based
+* Paragraph-based
+* Semantic chunking
+
+---
+
+## Step 6 - Metadata Generation
+
+Each chunk stores metadata describing its origin.
+
+Current metadata:
+
+```json id="1q0qwc"
+{}
+```
+
+Future metadata may include:
+
+```json id="yqyyda"
+{
+  "page": 5,
+  "section": "Leave Policy",
+  "heading": "Annual Leave",
+  "tokenCount": 230,
+  "language": "en"
+}
+```
+
+Metadata enables advanced filtering during retrieval.
+
+Examples:
+
+* Search only page 10
+* Search HR section
+* Search English documents
+
+---
+
+## Step 7 - Persist Chunks
+
+Each chunk is stored in PostgreSQL.
+
+Example:
+
+```text id="n0jknl"
+Document Version
+
+↓
+
+Chunk 1
+
+Chunk 2
+
+Chunk 3
+
+...
+
+Chunk N
+```
+
+Each chunk keeps:
+
+* chunk number
+* text
+* metadata
+* processing status
+
+---
+
+## Step 8 - Embedding Generation
+
+Each chunk is converted into a semantic vector.
+
+Current provider:
+
+```text id="jlwmrb"
+Ollama
+```
+
+Current model:
+
+```text id="rqjz2o"
+nomic-embed-text
+```
+
+Current vector size:
+
+```text id="mjlwm9"
+768 Dimensions
+```
+
+Example:
+
+```text id="lzxjwr"
+Chunk Text
+
+↓
+
+Embedding Generator
+
+↓
+
+768-Dimensional Vector
+```
+
+The application communicates with Ollama through an abstraction:
+
+```text id="h6ylxo"
+EmbeddingGenerator
+        │
+        ▼
+OllamaEmbeddingGenerator
+```
+
+Future providers:
+
+* OpenAI
+* Gemini
+* Azure OpenAI
+
+can be added without changing the processing workflow.
+
+---
+
+## Step 9 - Persist Embeddings
+
+Generated vectors are stored in PostgreSQL using pgvector.
+
+Relationship:
+
+```text id="bjlwm4"
+Document Chunk
+
+↓
+
+Embedding
+
+↓
+
+Vector
+```
+
+Current database:
+
+* PostgreSQL
+* pgvector
+
+This allows similarity search using vector distance.
+
+---
+
+## Step 10 - Version Activation
+
+Once every chunk and embedding has been successfully stored:
+
+1. Current version becomes **ACTIVE**.
+2. Previous active version becomes **INACTIVE**.
+
+Example:
+
+```text id="i4r7y8"
+Version 16
+
+↓
+
+INACTIVE
+
+Version 17
+
+↓
+
+ACTIVE
+```
+
+This guarantees retrieval always searches the latest processed version.
+
+---
+
+# Error Handling
+
+If any step fails:
+
+```text id="tw0y3m"
+Upload
+
+↓
+
+Processing
+
+↓
+
+Failure
+
+↓
+
+Version remains inactive
+```
+
+The previous active version continues serving search requests.
+
+No partially processed version becomes active.
+
+---
+
+# Current Processing Components
+
+| Component                        | Responsibility          |
+| -------------------------------- | ----------------------- |
+| CreateDocumentVersionUseCase     | Upload workflow         |
+| LocalFileStorageService          | Store original file     |
+| DefaultDocumentProcessingService | Pipeline orchestration  |
+| PdfBoxTextExtractor              | Text extraction         |
+| CharacterChunkingService         | Chunk generation        |
+| DefaultEmbeddingService          | Embedding orchestration |
+| OllamaEmbeddingGenerator         | Generate vectors        |
+| EmbeddingRepository              | Persist vectors         |
+
+---
+
+# Sequence Diagram
+
+```text id="q8kkul"
+Client
+   │
+   ▼
+Upload API
+   │
+   ▼
+Create Document Version
+   │
+   ▼
+Store File
+   │
+   ▼
+Process Document
+   │
+   ▼
+Extract Text
+   │
+   ▼
+Chunk Document
+   │
+   ▼
+Save Chunks
+   │
+   ▼
+Generate Embeddings
+   │
+   ▼
+Save Embeddings
+   │
+   ▼
+Activate Version
+```
+
+---
+
+# Future Processing Pipeline
+
+The current ingestion pipeline forms the foundation for future capabilities.
+
+Planned enhancements include:
+
+* Token-aware chunking
+* Semantic chunking
+* Multiple embedding models
+* Batch embedding generation
+* Parallel document processing
+* OCR support
+* Metadata enrichment
+* Language detection
+* Automatic keyword extraction
+* Incremental document updates
+
+The retrieval pipeline and chat pipeline will consume the embeddings generated by this processing pipeline.
