@@ -1,0 +1,5 @@
+ALTER TABLE knowledge_base
+    ADD COLUMN chunk_size INTEGER NOT NULL DEFAULT 500;
+
+ALTER TABLE knowledge_base
+    ADD COLUMN top_k INTEGER NOT NULL DEFAULT 5;
