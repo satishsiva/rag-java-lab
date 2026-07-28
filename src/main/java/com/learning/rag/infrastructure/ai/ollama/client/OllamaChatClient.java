@@ -1,18 +1,19 @@
 package com.learning.rag.infrastructure.ai.ollama.client;
 
 import com.learning.rag.infrastructure.ai.ollama.config.OllamaProperties;
-import com.learning.rag.infrastructure.ai.ollama.dto.OllamaEmbeddingRequest;
-import com.learning.rag.infrastructure.ai.ollama.dto.OllamaEmbeddingResponse;
+import com.learning.rag.infrastructure.ai.ollama.dto.OllamaChatRequest;
+import com.learning.rag.infrastructure.ai.ollama.dto.OllamaChatResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 @Component
-public class OllamaClient {
+public class OllamaChatClient {
 
     private final RestClient restClient;
     private final OllamaProperties properties;
 
-    public OllamaClient(OllamaProperties properties) {
+    public OllamaChatClient(
+            OllamaProperties properties) {
 
         this.properties = properties;
 
@@ -21,18 +22,24 @@ public class OllamaClient {
                 .build();
     }
 
-    public OllamaEmbeddingResponse embed(String text) {
+    public OllamaChatResponse generate(
+            String prompt) {
 
-        OllamaEmbeddingRequest request =
-                new OllamaEmbeddingRequest(
-                        properties.getEmbeddingModel(),
-                        text
+        OllamaChatRequest request =
+                new OllamaChatRequest(
+
+                        properties.getChatModel(),
+
+                        prompt,
+
+                        false
+
                 );
 
         return restClient.post()
-                .uri("/api/embed")
+                .uri("/api/generate")
                 .body(request)
                 .retrieve()
-                .body(OllamaEmbeddingResponse.class);
+                .body(OllamaChatResponse.class);
     }
 }

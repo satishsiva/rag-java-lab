@@ -9,6 +9,19 @@ public class OllamaProperties {
 
     private String embeddingModel;
 
+    private String chatModel;
+
+    public String getChatModel() {
+        return chatModel;
+    }
+
+    public void setChatModel(String chatModel) {
+        this.chatModel = chatModel;
+    }
+
+
+
+
     public String getBaseUrl() {
         return baseUrl;
     }
