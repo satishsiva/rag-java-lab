@@ -1,5 +1,6 @@
 package com.learning.rag.application.chat;
 
+import com.learning.rag.application.retrieval.ContextBlock;
 import com.learning.rag.application.retrieval.SearchResult;
 import org.springframework.stereotype.Component;
 
@@ -10,15 +11,15 @@ public class PromptBuilder {
 
     public String build(
             String question,
-            List<SearchResult> searchResults) {
+            List<ContextBlock> contextBlocks) {
 
         StringBuilder prompt = new StringBuilder();
 
         prompt.append(PromptTemplate.SYSTEM_PROMPT);
 
-        for (SearchResult result : searchResults) {
+        for (ContextBlock context : contextBlocks) {
 
-            prompt.append(result.text())
+            prompt.append(context.text())
                     .append("\n\n");
         }
 // TODO v0.4

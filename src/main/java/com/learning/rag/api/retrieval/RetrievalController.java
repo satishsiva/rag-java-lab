@@ -4,6 +4,7 @@ import com.learning.rag.api.retrieval.dto.RetrievalRequestDto;
 import com.learning.rag.api.retrieval.dto.RetrievalResponseDto;
 import com.learning.rag.application.retrieval.RetrievalRequest;
 import com.learning.rag.application.retrieval.RetrievalService;
+import com.learning.rag.application.retrieval.SearchFilters;
 import com.learning.rag.application.retrieval.SearchResult;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,7 +35,8 @@ public class RetrievalController {
         RetrievalRequest request =
                 new RetrievalRequest(
                         requestDto.question(),
-                        topK);
+                        topK,
+                        SearchFilters.activeOnly());
 
         List<SearchResult> results =
                 retrievalService.retrieve(request);

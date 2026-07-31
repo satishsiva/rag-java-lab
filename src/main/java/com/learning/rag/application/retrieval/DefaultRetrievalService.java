@@ -9,13 +9,15 @@ import java.util.List;
 @Service
 public class DefaultRetrievalService
         implements RetrievalService {
-
+        private final RetrievalOptimizer retrievalOptimizer;
         private final EmbeddingGenerator embeddingGenerator;
         private final VectorSearchRepository vectorSearchRepository;
 
         public DefaultRetrievalService(
+                RetrievalOptimizer retrievalOptimizer,
                 EmbeddingGenerator embeddingGenerator,
                 VectorSearchRepository vectorSearchRepository) {
+            this.retrievalOptimizer = retrievalOptimizer;
 
             this.embeddingGenerator = embeddingGenerator;
             this.vectorSearchRepository = vectorSearchRepository;
@@ -29,13 +31,16 @@ public class DefaultRetrievalService
                     embeddingGenerator.generate(
                             request.question());
 
-            return vectorSearchRepository.findNearest(
 
-                    queryEmbedding,
+            List<SearchResult> searchResults =
+                    vectorSearchRepository.findNearest(
+                            queryEmbedding,
+                            request.topK(),
+                            request.filter());
 
-                    request.topK()
+            return retrievalOptimizer.optimize(
+                    searchResults);
 
-            );
             // TODO v0.3
 // Apply metadata filtering before vector search.
             // TODO v0.4

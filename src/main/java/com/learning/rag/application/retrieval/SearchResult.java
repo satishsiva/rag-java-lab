@@ -9,7 +9,11 @@ public record SearchResult(
 
         String text,
 
-        double similarity
+        double similarity,
+
+        UUID documentVersionId,
+
+        Integer chunkNumber
 
 ) {
 }

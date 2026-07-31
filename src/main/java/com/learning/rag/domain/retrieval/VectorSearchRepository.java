@@ -1,18 +1,17 @@
 package com.learning.rag.domain.retrieval;
 
+import com.learning.rag.application.retrieval.SearchFilter;
 import com.learning.rag.application.retrieval.SearchResult;
 
 import java.util.List;
 
 public interface VectorSearchRepository {
 
+
     List<SearchResult> findNearest(
-
             float[] queryVector,
-
-            int topK
-
-    );
+            int topK,
+            SearchFilter filter);
     // TODO v0.3
 // Support metadata filtering.
     // TODO v0.5

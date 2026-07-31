@@ -1,9 +1,7 @@
 package com.learning.rag.application.chat;
 
 import com.learning.rag.application.ai.ChatGenerator;
-import com.learning.rag.application.retrieval.RetrievalRequest;
-import com.learning.rag.application.retrieval.RetrievalService;
-import com.learning.rag.application.retrieval.SearchResult;
+import com.learning.rag.application.retrieval.*;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,15 +11,18 @@ public class DefaultChatService
         implements ChatService {
 
     private final RetrievalService retrievalService;
+    private final RetrievalOptimizer retrievalOptimizer;
     private final PromptBuilder promptBuilder;
     private final ChatGenerator chatGenerator;
 
     public DefaultChatService(
             RetrievalService retrievalService,
+            RetrievalOptimizer retrievalOptimizer,
             PromptBuilder promptBuilder,
             ChatGenerator chatGenerator) {
 
         this.retrievalService = retrievalService;
+        this.retrievalOptimizer = retrievalOptimizer;
         this.promptBuilder = promptBuilder;
         this.chatGenerator = chatGenerator;
     }
@@ -30,18 +31,44 @@ public class DefaultChatService
     public ChatResponse ask(
             ChatRequest request) {
 
+        SearchFilter filter =
+                java.util.Objects.requireNonNullElseGet(
+                        request.filter(),
+                        SearchFilters::activeOnly
+                );
+
+        int topK =
+                java.util.Objects.requireNonNullElse(
+                        request.topK(),
+                        5
+                );
+
         List<SearchResult> searchResults =
                 retrievalService.retrieve(
-
                         new RetrievalRequest(
                                 request.question(),
-                                5
-                        ));
+                                topK,
+                                filter
+                        )
+                );
+
+        List<ContextBlock> contextBlocks =
+                retrievalOptimizer.optimize(searchResults);
+
+        if (contextBlocks.isEmpty()) {
+
+            return new ChatResponse(
+                    "I couldn't find any relevant information in the knowledge base.",
+                    searchResults
+
+            );
+        }
+
 
         String prompt =
                 promptBuilder.build(
                         request.question(),
-                        searchResults);
+                        contextBlocks);
 
         String answer =
                 chatGenerator.generate(prompt);

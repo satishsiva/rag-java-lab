@@ -29,7 +29,13 @@ public class ChatController {
                 chatService.ask(
 
                         new ChatRequest(
-                                requestDto.question()
+
+                                requestDto.question(),
+
+                                requestDto.topK(),
+
+                                requestDto.filter()
+
                         )
 
                 );

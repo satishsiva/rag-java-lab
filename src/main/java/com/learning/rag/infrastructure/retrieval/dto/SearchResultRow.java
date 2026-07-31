@@ -9,7 +9,11 @@ public record SearchResultRow(
 
         String text,
 
-        double similarity
+        double similarity,
+
+         UUID documentVersionId,
+
+        Integer chunkIndex
 
 ) {
 }

@@ -17,7 +17,12 @@ public class SearchResultMapper {
 
                 row.text(),
 
-                row.similarity()
+                row.similarity(),
+
+                row.documentVersionId(),
+
+                row.chunkIndex()
+
 
         );
     }

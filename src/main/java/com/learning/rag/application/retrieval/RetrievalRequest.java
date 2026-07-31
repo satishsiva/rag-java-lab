@@ -4,7 +4,9 @@ public record RetrievalRequest(
 
         String question,
 
-        int topK
+        int topK,
+
+        SearchFilter filter
 
 ) {
 }
