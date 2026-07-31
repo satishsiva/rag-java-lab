@@ -38,8 +38,7 @@ public class DefaultRetrievalService
                             request.topK(),
                             request.filter());
 
-            return retrievalOptimizer.optimize(
-                    searchResults);
+            return searchResults;
 
             // TODO v0.3
 // Apply metadata filtering before vector search.
